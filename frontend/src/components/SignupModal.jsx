@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, Button, Form, Spinner } from 'react-bootstrap';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 function SignupModal({ show, handleClose, handleShowLogin }) {
     const [username, setUsername] = useState('');
@@ -13,13 +14,12 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
     const [phone, setPhone] = useState('');
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    const API_URL = 'http://localhost:3482';
+    const { login } = useAuth();
+    const { showToast } = useToast();
 
     const validateForm = () => {
         const newErrors = {};
-        if (!username) newErrors.username = 'Username is required.';
+        if (!username || username.length < 6) newErrors.username = 'Username must be at least 6 characters.';
         if (!password || password.length < 6) newErrors.password = 'Password must be at least 6 characters.';
         if (!email || !/\S+@\S+\.\S+/.test(email)) newErrors.email = 'A valid email is required.';
         if (!firstName) newErrors.firstName = 'First name is required.';
@@ -41,31 +41,24 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
             return;
         }
 
-        const userData = {
-            username,
-            password,
-            email,
-            firstName,
-            lastName,
-            dateOfBirth,
-            phone,
-        };
-
         try {
-            const res = await axios.post(`${API_URL}/auth/register`, userData, { withCredentials: true });
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            handleClose();
-            if (window.location.pathname === '/') {
-                window.location.reload();
-            } else {
-                navigate('/');
-            }
+            const res = await api.post('/auth/register', {
+                username,
+                password,
+                email,
+                firstName,
+                lastName,
+                dateOfBirth,
+                phone,
+            });
+            login(res.data.user);
+            handleCloseModal();
+            showToast('Account created. Welcome aboard!', 'success');
         } catch (err) {
-            console.error('Error during registration:', err);
-            if (err.response && err.response.data && err.response.data.errors) {
+            if (err.response?.data?.errors) {
                 setErrors(err.response.data.errors);
             } else {
-                setErrors({ form: 'Registration failed. Please try again.' });
+                setErrors({ form: err.response?.data?.message || 'Registration failed. Please try again.' });
             }
         } finally {
             setLoading(false);
@@ -89,11 +82,6 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
         handleClose();
     };
 
-    const handleShowLoginModal = () => {
-        handleReset();
-        handleShowLogin();
-    };
-
     return (
         <Modal show={show} onHide={handleCloseModal} centered>
             <Modal.Header closeButton>
@@ -101,7 +89,7 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
             </Modal.Header>
             <Modal.Body>
                 <Form onSubmit={handleSubmit}>
-                    <Form.Group controlId="username">
+                    <Form.Group controlId="signup-username">
                         <Form.Label>Username</Form.Label>
                         <Form.Control
                             type="text"
@@ -111,11 +99,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.username}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.username}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.username}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="password" className="mt-3">
+                    <Form.Group controlId="signup-password" className="mt-3">
                         <Form.Label>Password</Form.Label>
                         <Form.Control
                             type="password"
@@ -125,11 +111,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.password}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.password}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.password}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="email" className="mt-3">
+                    <Form.Group controlId="signup-email" className="mt-3">
                         <Form.Label>Email</Form.Label>
                         <Form.Control
                             type="email"
@@ -139,11 +123,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.email}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.email}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.email}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="firstName" className="mt-3">
+                    <Form.Group controlId="signup-firstName" className="mt-3">
                         <Form.Label>First Name</Form.Label>
                         <Form.Control
                             type="text"
@@ -153,11 +135,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.firstName}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.firstName}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.firstName}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="lastName" className="mt-3">
+                    <Form.Group controlId="signup-lastName" className="mt-3">
                         <Form.Label>Last Name</Form.Label>
                         <Form.Control
                             type="text"
@@ -167,11 +147,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.lastName}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.lastName}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.lastName}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="dateOfBirth" className="mt-3">
+                    <Form.Group controlId="signup-dateOfBirth" className="mt-3">
                         <Form.Label>Date of Birth</Form.Label>
                         <Form.Control
                             type="date"
@@ -180,11 +158,9 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.dateOfBirth}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.dateOfBirth}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.dateOfBirth}</Form.Control.Feedback>
                     </Form.Group>
-                    <Form.Group controlId="phone" className="mt-3">
+                    <Form.Group controlId="signup-phone" className="mt-3">
                         <Form.Label>Phone (10 digits)</Form.Label>
                         <Form.Control
                             type="text"
@@ -194,9 +170,7 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                             isInvalid={!!errors.phone}
                             required
                         />
-                        <Form.Control.Feedback type="invalid">
-                            {errors.phone}
-                        </Form.Control.Feedback>
+                        <Form.Control.Feedback type="invalid">{errors.phone}</Form.Control.Feedback>
                     </Form.Group>
                     {errors.form && <p className="text-danger mt-2">{errors.form}</p>}
                     <Button type="submit" variant="primary" className="mt-3 w-100" disabled={loading}>
@@ -205,7 +179,7 @@ function SignupModal({ show, handleClose, handleShowLogin }) {
                 </Form>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="link" onClick={handleShowLoginModal} className="text-dark">
+                <Button variant="link" onClick={() => { handleCloseModal(); handleShowLogin(); }} className="text-dark">
                     Already have an account? Log In
                 </Button>
             </Modal.Footer>

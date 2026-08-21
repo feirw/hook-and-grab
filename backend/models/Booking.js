@@ -64,7 +64,6 @@ class Booking {
     );
   }
 
-  // Retrieve all bookings made by a renter
   static getByRenterId(renterId, callback) {
     const db = getDatabaseConnection();
     db.all('SELECT * FROM bookings WHERE renterId = ?', [renterId], (err, bookings) => {
@@ -74,6 +73,41 @@ class Booking {
       }
       return callback(null, bookings);
     });
+  }
+
+  static getDetailedByRenterId(renterId, callback) {
+    const db = getDatabaseConnection();
+    db.all(
+      `SELECT bookings.*, boats.title AS boatTitle, boats.location AS boatLocation, boats.pricePerDay
+       FROM bookings
+       JOIN boats ON boats.id = bookings.boatId
+       WHERE bookings.renterId = ?
+       ORDER BY bookings.startDate DESC`,
+      [renterId],
+      (err, bookings) => {
+        db.close();
+        if (err) return callback(err);
+        return callback(null, bookings);
+      }
+    );
+  }
+
+  static getDetailedByOwnerId(ownerId, callback) {
+    const db = getDatabaseConnection();
+    db.all(
+      `SELECT bookings.*, boats.title AS boatTitle, boats.location AS boatLocation, users.username AS renterUsername
+       FROM bookings
+       JOIN boats ON boats.id = bookings.boatId
+       LEFT JOIN users ON users.id = bookings.renterId
+       WHERE boats.ownerId = ?
+       ORDER BY bookings.startDate DESC`,
+      [ownerId],
+      (err, bookings) => {
+        db.close();
+        if (err) return callback(err);
+        return callback(null, bookings);
+      }
+    );
   }
 }
 

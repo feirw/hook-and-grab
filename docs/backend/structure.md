@@ -23,7 +23,8 @@ backend/
 │   ├── userController.js
 │   ├── productController.js
 │   ├── boatController.js
-│   └── bookingController.js
+│   ├── bookingController.js
+│   └── forumController.js
 ├── middlewares/
 │   ├── authMiddleware.js
 │   ├── corsMiddleware.js
@@ -32,13 +33,15 @@ backend/
 │   ├── User.js
 │   ├── Product.js
 │   ├── Boat.js
-│   └── Booking.js
+│   ├── Booking.js
+│   └── Forum.js
 ├── routes/
 │   ├── auth.js
 │   ├── users.js
 │   ├── products.js
 │   ├── boats.js
-│   └── bookings.js
+│   ├── bookings.js
+│   └── forum.js
 ├── uploads/
 │   ├── profiles/
 │   ├── products/

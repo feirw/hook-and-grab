@@ -1,111 +1,93 @@
-// controllers/boatController.js
 const Boat = require('../models/Boat');
-const fs = require('fs');
-const path = require('path');
+const { encodeImages } = require('../utils/images');
+const { validateBoatListing } = require('../validations/boatValidation');
 
-// Handle creating a new boat listing
+function withImages(boat) {
+  return { ...boat, images: encodeImages(boat.images) };
+}
+
 exports.createBoat = (req, res) => {
+  const { errors, isValid } = validateBoatListing(req.body);
+  if (!isValid) {
+    return res.status(400).json({ errors });
+  }
+
   const boatData = {
-    ownerId: req.user.id, // The ID of the logged-in user creating the boat
-    title: req.body.title, // Title of the boat listing
-    description: req.body.description, // Description of the boat
-    pricePerDay: req.body.pricePerDay, // Rental price per day
-    location: req.body.location, // Location of the boat
-    images: req.files ? req.files.map((file) => `/uploads/boats/${file.filename}`) : [], // Uploaded images
-    datePosted: new Date().toISOString(), // Timestamp of when the listing was created
+    ownerId: req.user.id,
+    title: req.body.title,
+    description: req.body.description,
+    pricePerDay: parseFloat(req.body.pricePerDay) || 0,
+    location: req.body.location,
+    images: req.files ? req.files.map((file) => `/uploads/boats/${file.filename}`) : [],
+    datePosted: new Date().toISOString(),
   };
 
-  // Create the boat in the database
   Boat.create(boatData, (err, boat) => {
     if (err) {
       return res.status(500).json({ message: 'Error creating boat listing.' });
     }
-    res.status(201).json({ message: 'Boat listed successfully.', boat });
+    res.status(201).json({
+      message: 'Boat listed successfully.',
+      boat: withImages({
+        ...boatData,
+        ...boat,
+        images: boatData.images.join(';'),
+        ownerUsername: req.user.username,
+        ownerEmail: req.user.email,
+        ownerPhone: req.user.phone,
+      }),
+    });
   });
 };
 
-// Fetch boat listings with pagination
 exports.getAllBoats = (req, res) => {
-  const limit = parseInt(req.query.limit) || 10; // Number of boats to return
-  const offset = parseInt(req.query.offset) || 0; // Offset for pagination
+  const limit = parseInt(req.query.limit, 10) || 100;
+  const offset = parseInt(req.query.offset, 10) || 0;
 
   Boat.getAll(limit, offset, (err, boats) => {
     if (err) {
       return res.status(500).json({ message: 'Error fetching boats.' });
     }
-
-    // Include images as binary data
-    const boatsWithImages = boats.map((boat) => {
-      const images = boat.images ? boat.images.split(';') : [];
-      const imageDataArray = images.map((imagePath) => {
-        const absolutePath = path.join(__dirname, '..', imagePath);
-        try {
-          const imageData = fs.readFileSync(absolutePath);
-          return {
-            filename: path.basename(imagePath),
-            data: imageData.toString('base64'),
-          };
-        } catch (err) {
-          console.error('Error reading image:', err);
-          return null;
-        }
-      });
-
-      return { ...boat, images: imageDataArray };
-    });
-
-    res.json({ boats: boatsWithImages });
+    res.json({ boats: boats.map(withImages) });
   });
 };
 
-// Fetch a single boat listing by its ID
 exports.getBoatById = (req, res) => {
-  const boatId = req.params.id; // ID of the boat to fetch
-  Boat.getById(boatId, (err, boat) => {
+  Boat.getById(req.params.id, (err, boat) => {
     if (err || !boat) {
       return res.status(404).json({ message: 'Boat not found.' });
     }
-
-    // Include images as binary data
-    const images = boat.images ? boat.images.split(';') : [];
-    const imageDataArray = images.map((imagePath) => {
-      const absolutePath = path.join(__dirname, '..', imagePath);
-      try {
-        const imageData = fs.readFileSync(absolutePath);
-        return {
-          filename: path.basename(imagePath),
-          data: imageData.toString('base64'),
-        };
-      } catch (err) {
-        console.error('Error reading image:', err);
-        return null;
-      }
-    });
-
-    res.json({ boat: { ...boat, images: imageDataArray } });
+    res.json({ boat: withImages(boat) });
   });
 };
 
-// Delete a boat listing by its ID (only the owner can delete)
 exports.deleteBoat = (req, res) => {
-  const boatId = req.params.id; // ID of the boat to delete
-  const userId = req.user.id; // ID of the requesting user
+  const boatId = req.params.id;
+  const userId = req.user.id;
 
   Boat.getById(boatId, (err, boat) => {
     if (err || !boat) {
       return res.status(404).json({ message: 'Boat not found.' });
     }
 
-    // Check if the current user is the owner of the boat
-    if (boat.ownerId !== userId) {
+    if (Number(boat.ownerId) !== Number(userId)) {
       return res.status(403).json({ message: 'Forbidden: You cannot delete this boat.' });
     }
 
-    Boat.deleteById(boatId, (err) => {
-      if (err) {
+    Boat.deleteById(boatId, (deleteErr) => {
+      if (deleteErr) {
         return res.status(500).json({ message: 'Error deleting boat.' });
       }
       res.json({ message: 'Boat deleted successfully.' });
     });
+  });
+};
+
+exports.getMyBoats = (req, res) => {
+  Boat.getByOwnerId(req.user.id, (err, boats) => {
+    if (err) {
+      return res.status(500).json({ message: 'Error fetching boats.' });
+    }
+    res.json({ boats: boats.map(withImages) });
   });
 };

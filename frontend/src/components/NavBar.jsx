@@ -1,76 +1,62 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Navbar, Nav, Container, NavDropdown } from 'react-bootstrap';
 import Drawer from '@mui/material/Drawer';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import KeyboardTab from '@mui/icons-material/KeyboardTab';
-import LoginModal from './LoginModal';
-import SignupModal from './SignupModal';
 import './../styles/NavBar.css';
 import hookIcon from './../assets/icons/hook.svg';
+import { useAuth } from '../context/AuthContext';
 
 function NavBar() {
     const navigate = useNavigate();
-
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [user, setUser] = useState(null);
+    const location = useLocation();
+    const { isLoggedIn, user, logout, openLogin, openSignup } = useAuth();
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-    const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-    const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
 
-    useEffect(() => {
-        const storedUser = JSON.parse(localStorage.getItem('user'));
-        if (storedUser) {
-            setIsLoggedIn(true);
-            setUser(storedUser);
-        }
-    }, []);
-
-    const handleLogout = () => {
-        localStorage.removeItem('user');
-        setIsLoggedIn(false);
-        setUser(null);
+    const handleLogout = async () => {
+        await logout();
         navigate('/');
     };
 
     const toggleDrawer = (open) => () => setIsDrawerOpen(open);
 
-    const handleShowSignup = () => {
-        setIsLoginModalOpen(false);
-        setIsSignupModalOpen(true);
+    const goTo = (path) => {
+        setIsDrawerOpen(false);
+        navigate(path);
     };
 
-    const handleShowLogin = () => {
-        setIsSignupModalOpen(false);
-        setIsLoginModalOpen(true);
+    const goToAbout = () => {
+        setIsDrawerOpen(false);
+        if (location.pathname === '/' || location.pathname === '/home') {
+            document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+            return;
+        }
+        navigate('/');
+        setTimeout(() => {
+            document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
     };
 
-    const navigationLinks = {
-        home: () => navigate('/'),
-        market: () => navigate('/market'),
-        rentaboat: () => navigate('/rentaboat'),
-        forum: () => navigate('/forum'),
-        faq: () => navigate('/faq'),
-        profile: () => navigate('/profile'),
-    };
+    const isActive = (path) => location.pathname === path;
 
     const drawerContent = (
         <div className="drawer-content">
             <KeyboardTab className="drawer-close" onClick={toggleDrawer(false)} />
             <Nav className="flex-column">
-                <Nav.Link onClick={navigationLinks.market}>Market</Nav.Link>
-                <Nav.Link onClick={navigationLinks.rentaboat}>Rent a Boat</Nav.Link>
-                <Nav.Link onClick={navigationLinks.forum}>Forum</Nav.Link>
-                <Nav.Link onClick={navigationLinks.faq}>FAQ</Nav.Link>
-                <Nav.Link href="#about">About</Nav.Link>
+                <Nav.Link onClick={() => goTo('/market')}>Market</Nav.Link>
+                <Nav.Link onClick={() => goTo('/rentaboat')}>Rent a Boat</Nav.Link>
+                <Nav.Link onClick={() => goTo('/forum')}>Forum</Nav.Link>
+                <Nav.Link onClick={() => goTo('/faq')}>FAQ</Nav.Link>
+                <Nav.Link onClick={goToAbout}>About</Nav.Link>
                 {isLoggedIn ? (
                     <>
-                        <Nav.Link onClick={navigationLinks.profile}>{user?.username || 'Profile'}</Nav.Link>
+                        <Nav.Link onClick={() => goTo('/profile')}>{user?.username || 'Profile'}</Nav.Link>
                         <Nav.Link onClick={handleLogout}>Log Out</Nav.Link>
                     </>
                 ) : (
-                    <Nav.Link onClick={() => setIsLoginModalOpen(true)}>Account</Nav.Link>
+                    <Nav.Link onClick={() => { setIsDrawerOpen(false); openLogin(); }}>Account</Nav.Link>
                 )}
             </Nav>
         </div>
@@ -79,12 +65,11 @@ function NavBar() {
     return (
         <Navbar className="custom-navbar" variant="dark" expand="lg" fixed="top">
             <Container>
-                <Navbar.Brand onClick={navigationLinks.home} style={{ cursor: 'pointer' }}>
+                <Navbar.Brand onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
                     Hook&Grab
                     <img src={hookIcon} alt="Hook&Grab" id="icon-brand" />
                 </Navbar.Brand>
 
-                {/* Mobile Menu */}
                 <div className="d-lg-none">
                     <IconButton
                         edge="end"
@@ -96,27 +81,26 @@ function NavBar() {
                     </IconButton>
                 </div>
 
-                {/* Desktop Menu */}
                 <div className="d-none d-lg-flex w-100 justify-content-end">
                     <Nav className="me-auto">
-                        <Nav.Link onClick={navigationLinks.market}>Market</Nav.Link>
-                        <Nav.Link onClick={navigationLinks.rentaboat}>Rent a Boat</Nav.Link>
-                        <Nav.Link onClick={navigationLinks.forum}>Forum</Nav.Link>
-                        <Nav.Link onClick={navigationLinks.faq}>FAQ</Nav.Link>
-                        <Nav.Link href="#about">About</Nav.Link>
+                        <Nav.Link className={isActive('/market') ? 'nav-active' : ''} onClick={() => navigate('/market')}>Market</Nav.Link>
+                        <Nav.Link className={isActive('/rentaboat') ? 'nav-active' : ''} onClick={() => navigate('/rentaboat')}>Rent a Boat</Nav.Link>
+                        <Nav.Link className={isActive('/forum') ? 'nav-active' : ''} onClick={() => navigate('/forum')}>Forum</Nav.Link>
+                        <Nav.Link className={isActive('/faq') ? 'nav-active' : ''} onClick={() => navigate('/faq')}>FAQ</Nav.Link>
+                        <Nav.Link onClick={goToAbout}>About</Nav.Link>
                     </Nav>
                     <Nav>
                         <NavDropdown title={isLoggedIn ? (user?.username || 'Account') : 'Account'} id="account-dropdown" align="end">
                             {isLoggedIn ? (
                                 <>
-                                    <NavDropdown.Item onClick={navigationLinks.profile} className="no-text-shadow">Profile</NavDropdown.Item>
+                                    <NavDropdown.Item onClick={() => navigate('/profile')} className="no-text-shadow">Profile</NavDropdown.Item>
                                     <NavDropdown.Divider />
                                     <NavDropdown.Item onClick={handleLogout} className="no-text-shadow">Log Out</NavDropdown.Item>
                                 </>
                             ) : (
                                 <>
-                                    <NavDropdown.Item onClick={handleShowLogin} className="no-text-shadow">Log In</NavDropdown.Item>
-                                    <NavDropdown.Item onClick={handleShowSignup} className="no-text-shadow">Sign Up</NavDropdown.Item>
+                                    <NavDropdown.Item onClick={openLogin} className="no-text-shadow">Log In</NavDropdown.Item>
+                                    <NavDropdown.Item onClick={openSignup} className="no-text-shadow">Sign Up</NavDropdown.Item>
                                 </>
                             )}
                         </NavDropdown>
@@ -124,24 +108,9 @@ function NavBar() {
                 </div>
             </Container>
 
-            {/* Drawer */}
             <Drawer anchor="right" open={isDrawerOpen} onClose={toggleDrawer(false)}>
                 {drawerContent}
             </Drawer>
-
-            {/* Login Modal */}
-            <LoginModal
-                show={isLoginModalOpen}
-                handleClose={() => setIsLoginModalOpen(false)}
-                handleShowSignup={handleShowSignup}
-            />
-
-            {/* Signup Modal */}
-            <SignupModal
-                show={isSignupModalOpen}
-                handleClose={() => setIsSignupModalOpen(false)}
-                handleShowLogin={handleShowLogin}
-            />
         </Navbar>
     );
 }

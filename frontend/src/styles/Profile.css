@@ -79,6 +79,31 @@
   .removeWhiteLineAtBottom {
     margin-bottom: 0px;
   }
+
+  .profile-avatar {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+  }
+
+  .profile-section {
+    text-align: left;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 16px;
+    padding: 16px 20px;
+    margin: 16px auto;
+  }
+
+  .incoming-booking {
+    margin-bottom: 12px;
+  }
+
+  .booking-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
   @media (max-width: 768px) {
     .container {
       flex-direction: column; /* Stack boxes vertically */

@@ -8,6 +8,7 @@ const router = express.Router();
 
 // Retrieve the current authenticated user's information
 router.get('/me', ensureAuthenticated, userController.getCurrentUser);
+router.get('/me/activity', ensureAuthenticated, userController.getMyActivity);
 
 // Search for users based on a keyword
 router.get('/search', userController.searchUsers);

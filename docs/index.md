@@ -10,6 +10,7 @@ Welcome to the **BlueEco-pedia** project documentation.
   - [Products](./api/products.md)
   - [Boats](./api/boats.md)
   - [Bookings](./api/bookings.md)
+  - [Forum](./api/forum.md)
 - [Backend Structure](#backend-structure)
   - [Project Structure](./backend/structure.md)
   - [Libraries and Frameworks](./backend/libraries.md)
@@ -25,6 +26,7 @@ Detailed documentation of all API endpoints.
 - [Products](./api/products.md)
 - [Boats](./api/boats.md)
 - [Bookings](./api/bookings.md)
+- [Forum](./api/forum.md)
 
 ## Backend Structure
 

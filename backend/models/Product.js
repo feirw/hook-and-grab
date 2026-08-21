@@ -46,7 +46,10 @@ class Product {
   static getAll(limit, offset, callback) {
     const db = getDatabaseConnection();
     db.all(
-      'SELECT * FROM products ORDER BY datePosted DESC LIMIT ? OFFSET ?',
+      `SELECT products.*, users.username AS sellerUsername, users.email AS sellerEmail, users.phone AS sellerPhone
+       FROM products
+       LEFT JOIN users ON users.id = products.sellerId
+       ORDER BY datePosted DESC LIMIT ? OFFSET ?`,
       [limit, offset],
       (err, products) => {
         db.close();
@@ -102,6 +105,23 @@ class Product {
       }
       return callback(null, products);
     });
+  }
+
+  static getBySellerId(sellerId, callback) {
+    const db = getDatabaseConnection();
+    db.all(
+      `SELECT products.*, users.username AS sellerUsername, users.email AS sellerEmail, users.phone AS sellerPhone
+       FROM products
+       LEFT JOIN users ON users.id = products.sellerId
+       WHERE products.sellerId = ?
+       ORDER BY datePosted DESC`,
+      [sellerId],
+      (err, products) => {
+        db.close();
+        if (err) return callback(err);
+        return callback(null, products);
+      }
+    );
   }
 
   // Retrieve a product by its ID

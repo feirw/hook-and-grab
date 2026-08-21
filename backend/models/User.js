@@ -2,9 +2,7 @@
 
 const bcrypt = require('bcrypt');
 const { getDatabaseConnection } = require('../config/database');
-const fs = require('fs');
-const path = require('path');
-const mime = require('mime-types');
+const { encodeImage } = require('../utils/images');
 
 class User {
   /**
@@ -103,27 +101,14 @@ class User {
       const usersWithImages = [];
 
       users.forEach((user) => {
-        const profilePicturePath = path.join(__dirname, '..', user.profilePicture);
-        fs.readFile(profilePicturePath, (err, data) => {
-          if (err) {
-            user.profilePicture = null;
-          } else {
-            const mimeType = mime.lookup(profilePicturePath) || 'application/octet-stream';
-            user.profilePicture = {
-              filename: path.basename(user.profilePicture),
-              data: data.toString('base64'),
-              mimeType: mimeType,
-            };
-          }
+        user.profilePicture = encodeImage(user.profilePicture);
+        usersWithImages.push(user);
+        processedUsers++;
 
-          usersWithImages.push(user);
-          processedUsers++;
-
-          if (processedUsers === users.length) {
-            db.close();
-            return callback(null, usersWithImages);
-          }
-        });
+        if (processedUsers === users.length) {
+          db.close();
+          return callback(null, usersWithImages);
+        }
       });
     });
   }
@@ -144,24 +129,10 @@ class User {
           return callback(err);
         }
         if (user) {
-          // Read and encode the profile picture
-          const profilePicturePath = path.join(__dirname, '..', user.profilePicture);
-          fs.readFile(profilePicturePath, (err, data) => {
-            if (err) {
-              user.profilePicture = null;
-            } else {
-              const mimeType = mime.lookup(profilePicturePath) || 'application/octet-stream';
-              user.profilePicture = {
-                filename: path.basename(user.profilePicture),
-                data: data.toString('base64'),
-                mimeType: mimeType,
-              };
-            }
-            return callback(null, user);
-          });
-        } else {
-          return callback(null, null);
+          user.profilePicture = encodeImage(user.profilePicture);
+          return callback(null, user);
         }
+        return callback(null, null);
       }
     );
   }
@@ -182,25 +153,10 @@ class User {
           return callback(err);
         }
         if (user) {
-          // Read and encode the profile picture
-          const profilePicturePath = path.join(__dirname, '..', user.profilePicture);
-          fs.readFile(profilePicturePath, (err, data) => {
-            if (err) {
-              // If there's an error reading the profile picture, set it to null
-              user.profilePicture = null;
-            } else {
-              const mimeType = mime.lookup(profilePicturePath) || 'application/octet-stream';
-              user.profilePicture = {
-                filename: path.basename(user.profilePicture),
-                data: data.toString('base64'),
-                mimeType: mimeType,
-              };
-            }
-            return callback(null, user);
-          });
-        } else {
-          return callback(null, null);
+          user.profilePicture = encodeImage(user.profilePicture);
+          return callback(null, user);
         }
+        return callback(null, null);
       }
     );
   }

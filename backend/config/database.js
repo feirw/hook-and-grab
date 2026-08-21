@@ -1,22 +1,20 @@
-// config/database.js
 const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const { seedIfEmpty } = require('./seed');
 
-const dbDir = path.resolve(__dirname, '../database'); // Define the database directory path
+const dbDir = path.resolve(__dirname, '../database');
 
-// Check if the 'database' directory exists
 if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true }); // Create the directory if it doesn't exist
+  fs.mkdirSync(dbDir, { recursive: true });
 }
 
-const dbPath = path.resolve(__dirname, '../database/db.sqlite'); // Path to the SQLite database file
+const dbPath = path.resolve(__dirname, '../database/db.sqlite');
 
 function initializeDatabase() {
   const db = new sqlite3.Database(dbPath);
 
   db.serialize(() => {
-    // Create Users Table
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,7 +29,6 @@ function initializeDatabase() {
       )
     `);
 
-    // Create Products Table
     db.run(`
       CREATE TABLE IF NOT EXISTS products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +44,6 @@ function initializeDatabase() {
       )
     `);
 
-    // Create Boats Table
     db.run(`
       CREATE TABLE IF NOT EXISTS boats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -62,7 +58,6 @@ function initializeDatabase() {
       )
     `);
 
-    // Create Bookings Table
     db.run(`
       CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,9 +70,33 @@ function initializeDatabase() {
         FOREIGN KEY (renterId) REFERENCES users(id)
       )
     `);
-  });
 
-  db.close();
+    db.run(`
+      CREATE TABLE IF NOT EXISTS forum_discussions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        body TEXT,
+        authorId INTEGER,
+        createdAt TEXT,
+        views INTEGER DEFAULT 0,
+        FOREIGN KEY (authorId) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
+      CREATE TABLE IF NOT EXISTS forum_replies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        discussionId INTEGER,
+        authorId INTEGER,
+        body TEXT,
+        createdAt TEXT,
+        FOREIGN KEY (discussionId) REFERENCES forum_discussions(id),
+        FOREIGN KEY (authorId) REFERENCES users(id)
+      )
+    `);
+
+    seedIfEmpty(db, () => db.close());
+  });
 }
 
 function getDatabaseConnection() {

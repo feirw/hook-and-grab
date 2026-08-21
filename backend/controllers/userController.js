@@ -1,10 +1,11 @@
-// controllers/userController.js
 const User = require('../models/User');
+const Product = require('../models/Product');
+const Boat = require('../models/Boat');
+const Booking = require('../models/Booking');
+const { encodeImages } = require('../utils/images');
 
-// Retrieve the current authenticated user's information
 exports.getCurrentUser = (req, res) => {
   if (req.user) {
-    // Fetch the user including the profile picture
     User.findById(req.user.id, (err, user) => {
       if (err) {
         return res.status(500).json({ message: 'Error retrieving user data.' });
@@ -16,27 +17,21 @@ exports.getCurrentUser = (req, res) => {
   }
 };
 
-// Update the user's profile picture
 exports.updateProfilePicture = (req, res) => {
   const userId = req.user.id;
-  const profilePicturePath = req.file ? `/uploads/profiles/${req.file.filename}` : null;
+  if (!req.file) {
+    return res.status(400).json({ message: 'Profile picture is required.' });
+  }
+  const profilePicturePath = `/uploads/profiles/${req.file.filename}`;
 
-  User.updateProfilePicture(userId, profilePicturePath, (err) => {
+  User.updateProfilePicture(userId, profilePicturePath, (err, user) => {
     if (err) {
       return res.status(500).json({ message: 'Error updating profile picture.' });
     }
-
-    // Fetch the updated user data
-    User.findById(userId, (err, user) => {
-      if (err) {
-        return res.status(500).json({ message: 'Error retrieving user data.' });
-      }
-      res.json({ message: 'Profile picture updated successfully.', user });
-    });
+    res.json({ message: 'Profile picture updated successfully.', user });
   });
 };
 
-// Delete the current user's account and log them out
 exports.deleteAccount = (req, res) => {
   const userId = req.user.id;
   User.deleteById(userId, (err) => {
@@ -49,7 +44,6 @@ exports.deleteAccount = (req, res) => {
   });
 };
 
-// Search for users based on a keyword (only username)
 exports.searchUsers = (req, res) => {
   const keyword = req.query.keyword;
 
@@ -58,5 +52,46 @@ exports.searchUsers = (req, res) => {
       return res.status(500).json({ message: 'Error searching users.' });
     }
     res.json({ users });
+  });
+};
+
+exports.getMyActivity = (req, res) => {
+  const userId = req.user.id;
+
+  Product.getBySellerId(userId, (productErr, products) => {
+    if (productErr) {
+      return res.status(500).json({ message: 'Error fetching activity.' });
+    }
+
+    Boat.getByOwnerId(userId, (boatErr, boats) => {
+      if (boatErr) {
+        return res.status(500).json({ message: 'Error fetching activity.' });
+      }
+
+      Booking.getDetailedByRenterId(userId, (renterErr, myBookings) => {
+        if (renterErr) {
+          return res.status(500).json({ message: 'Error fetching activity.' });
+        }
+
+        Booking.getDetailedByOwnerId(userId, (ownerErr, incomingBookings) => {
+          if (ownerErr) {
+            return res.status(500).json({ message: 'Error fetching activity.' });
+          }
+
+          res.json({
+            products: (products || []).map((product) => ({
+              ...product,
+              images: encodeImages(product.images),
+            })),
+            boats: (boats || []).map((boat) => ({
+              ...boat,
+              images: encodeImages(boat.images),
+            })),
+            myBookings: myBookings || [],
+            incomingBookings: incomingBookings || [],
+          });
+        });
+      });
+    });
   });
 };

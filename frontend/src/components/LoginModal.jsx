@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, Button, Form, Spinner } from 'react-bootstrap';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 
 function LoginModal({ show, handleClose, handleShowSignup }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-
-    const API_URL = 'http://localhost:3482';
+    const { login } = useAuth();
+    const { showToast } = useToast();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -24,17 +24,11 @@ function LoginModal({ show, handleClose, handleShowSignup }) {
         }
 
         try {
-            const res = await axios.post(`${API_URL}/auth/login`, { username, password }, { withCredentials: true });
-            // Assuming response: { message: '...', user: {...} }
-            localStorage.setItem('user', JSON.stringify(res.data.user));
-            handleClose();
-            if (window.location.pathname === '/') {
-                window.location.reload();
-            } else {
-                navigate('/');
-            }
+            const res = await api.post('/auth/login', { username, password });
+            login(res.data.user);
+            handleCloseModal();
+            showToast(`Welcome back, ${res.data.user.username}!`, 'success');
         } catch (err) {
-            console.error(err);
             setError(err.response?.data?.message || 'Login failed. Please try again.');
         } finally {
             setLoading(false);
@@ -49,11 +43,6 @@ function LoginModal({ show, handleClose, handleShowSignup }) {
         handleClose();
     };
 
-    const handleShowSignupModal = () => {
-        handleCloseModal();
-        handleShowSignup();
-    }
-
     return (
         <Modal show={show} onHide={handleCloseModal} centered>
             <Modal.Header closeButton>
@@ -61,7 +50,7 @@ function LoginModal({ show, handleClose, handleShowSignup }) {
             </Modal.Header>
             <Modal.Body>
                 <Form onSubmit={handleSubmit}>
-                    <Form.Group controlId="username">
+                    <Form.Group controlId="login-username">
                         <Form.Label>Username</Form.Label>
                         <Form.Control
                             type="text"
@@ -71,7 +60,7 @@ function LoginModal({ show, handleClose, handleShowSignup }) {
                             required
                         />
                     </Form.Group>
-                    <Form.Group controlId="password" className="mt-3">
+                    <Form.Group controlId="login-password" className="mt-3">
                         <Form.Label>Password</Form.Label>
                         <Form.Control
                             type="password"
@@ -82,13 +71,14 @@ function LoginModal({ show, handleClose, handleShowSignup }) {
                         />
                     </Form.Group>
                     {error && <p className="text-danger mt-2">{error}</p>}
+                    <p className="text-muted mt-3 mb-0 small">Demo: captain / hookgrab</p>
                     <Button type="submit" variant="primary" className="mt-3 w-100" disabled={loading}>
                         {loading ? <Spinner animation="border" size="sm" /> : 'Log In'}
                     </Button>
                 </Form>
             </Modal.Body>
             <Modal.Footer>
-                <Button variant="link" onClick={handleShowSignupModal} className="text-dark">
+                <Button variant="link" onClick={() => { handleCloseModal(); handleShowSignup(); }} className="text-dark">
                     Don't have an account? Register
                 </Button>
             </Modal.Footer>

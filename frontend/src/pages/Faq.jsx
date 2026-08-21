@@ -1,44 +1,58 @@
-import './../styles/Forum.css';
-import './../components/NavBar';
-import NavBar from './../components/NavBar';
-import './../styles/Faq.css'; // Import the Faq styles
+import { useState } from 'react';
+import '../styles/Faq.css';
+
+const faqs = [
+    {
+        question: 'Γιατί μπλε οικονομία;',
+        answer: 'Η «μπλε» οικονομία αφορά την υπεύθυνη χρήση των υδάτινων πόρων και την προστασία των θαλασσών. Προωθεί ανάπτυξη που δεν εξαντλεί το περιβάλλον: από την επεξεργασία θαλάσσιων αποβλήτων μέχρι θαλάσσια αιολική ενέργεια και ενέργεια από τα κύματα.',
+    },
+    {
+        question: 'Σε τι βοηθάει;',
+        answer: 'Βελτιώνει την ποιότητα των υδάτων και της θαλάσσιας ζωής, μειώνει την υπεραλιεία και δημιουργεί νέες επιχειρηματικές ευκαιρίες στην ενέργεια, την αλιεία, τη βιοτεχνολογία και τις τεχνολογίες καθαρισμού του νερού.',
+    },
+    {
+        question: 'What is Hook&Grab?',
+        answer: 'Hook&Grab is a circular marketplace for coastal communities: buy, sell, or trade used marine gear, rent boats instead of buying new ones, and share know-how in the forum.',
+    },
+    {
+        question: 'How do rentals work?',
+        answer: 'Choose a boat, pick your dates, and send a booking request. The owner approves or rejects it from their profile. Rejected dates become available again.',
+    },
+    {
+        question: 'Do I need an account?',
+        answer: 'You can browse freely. An account is needed to list products or boats, request a rental, upload a profile photo, or post in the forum.',
+    },
+    {
+        question: 'Is there payment on the platform?',
+        answer: 'Not yet. Listings connect people directly so gear and boats stay in use locally, with less waste and fewer new purchases.',
+    },
+];
 
 function Faq() {
+    const [openIndex, setOpenIndex] = useState(0);
+
     return (
         <div className="site-container">
             <div className="content-container">
-                <NavBar />
                 <section className="faq-section">
                     <article className="box5">
                         <h2>Frequently Asked Questions</h2>
-                        <div className="faq-item">
-                            <h3>Γιατί μπλε οικονομία;</h3>
-                            <p>Αναρωτηθήκατε ποτέ πόσο μπορεί να αλλάξει η έννοια της οικονομίας αν «βαφτεί» μπλε; Πράγματι, η `«μπλε» οικονομία`, 
-                                με κύριο θέμα την εκμετάλλευση των υδάτινων πόρων και την προστασία των θαλασσών, αποτελεί σήμερα -και δικαίως- ένα φλέγον 
-                                ζήτημα στην κοινότητα των περιβαλλοντικών οργανώσεων, όπως η Greenpeace και το WWF. 
-                                Τι είναι, όμως, αυτό που την καθιστά τόσο ξεχωριστή;</p>
-                            <br />
-                            <p>
-                            Η «μπλε» οικονομία έχει αδιαμφισβήτητα απαράμιλλη σημασία για το οικοσύστημά μας. Συγκεκριμένα, προωθεί την ανάπτυξη και 
-                            εκμετάλλευση των θαλασσών με τρόπο που `δεν εξαντλεί το περιβάλλον` ή τους φυσικούς πόρους. Όχι μόνο δεν τους εξαντλεί, 
-                            αλλά τους αξιοποιεί στο έπακρο. Για παράδειγμα, μία από τις καινοτόμες προσεγγίσεις της είναι η επεξεργασία των θαλάσσιων αποβλήτων, 
-                            όπως τα πλαστικά, και η μετατροπή τους σε χρήσιμα προϊόντα, όπως νέα υλικά για την κατασκευή κτιρίων ή ακόμη και ως καύσιμα. 
-                            </p>
-                            <br />
-                            <p>
-                            Πέρα από αυτό, μέσω αυτής της καινοτομίας, προωθείται η `ανάπτυξη των θαλάσσιων ανανεώσιμων πηγών ενέργειας`, όπως η 
-                            αιολική ενέργεια από τη θάλασσα (π.χ. θαλάσσιες ανεμογεννήτριες) και η παραγωγή ενέργειας από τα κύματα και τις θαλάσσιες 
-                            θερμικές διακυμάνσεις.</p>
-                        </div>
-                        <div className="faq-item">
-                            <h3>Σε τι βοηθάει;</h3>
-                            <p>Αδιαμφισβήτητα, η μπλε οικονομία εξυπηρετεί τόσο τους θαλάσσιους φίλους μας όσο και εμάς τους ίδιους. Αρχικά, `βελτιώνεται η ποιότητα των υδάτων` και της θαλάσσιας ζωής με τον καθαρισμό των ωκεανών, τη μείωση της υπεραλιείας και την συνολική προστασία της θαλάσσιας βιοποικιλότητας. Τέλος, η μπλε οικονομία ενθαρρύνει την καινοτομία και τη `δημιουργία νέων επιχειρηματικών ευκαιριών` στους τομείς της θαλάσσιας ενέργειας, της αλιείας, της βιοτεχνολογίας, των τεχνολογιών καθαρισμού του νερού και άλλων, με σκοπό την οικονομική ανάπτυξη και τη δημιουργία θέσεων εργασίας.
-                            </p>
-                            <br />
-                            <p>
-                            Όπως όλοι καταλαβαίνουμε, η «μπλε» οικονομία φαντάζει σαν από μηχανής θεός σε μια καταναλωτική κοινωνία. Αν λοιπόν εφαρμοστεί, υπάρχουν πολλές πιθανότητες να περιοριστεί σημαντικά η ρύπανση των θαλασσών και να μην κλονίζεται άλλο η τροφική αλυσίδα!
-                            </p>
-                        </div>
+                        {faqs.map((item, index) => {
+                            const isOpen = openIndex === index;
+                            return (
+                                <div className={`faq-item ${isOpen ? 'open' : ''}`} key={item.question}>
+                                    <button
+                                        type="button"
+                                        className="faq-question"
+                                        onClick={() => setOpenIndex(isOpen ? -1 : index)}
+                                        aria-expanded={isOpen}
+                                    >
+                                        {item.question}
+                                    </button>
+                                    {isOpen && <p>{item.answer}</p>}
+                                </div>
+                            );
+                        })}
                     </article>
                 </section>
             </div>

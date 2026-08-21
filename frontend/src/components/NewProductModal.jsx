@@ -1,123 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import '../styles/NewProductModal.css';
+import { useState, useEffect } from 'react';
+import { Modal, Button, Form, Spinner } from 'react-bootstrap';
+import api from '../api/client';
+import { useToast } from '../context/ToastContext';
 
-const NewProductModal = ({ isOpen, onClose, onAddProduct }) => {
+function NewProductModal({ isOpen, onClose, onAddProduct }) {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
     const [isFree, setIsFree] = useState(false);
     const [isOpenToTrade, setIsOpenToTrade] = useState(false);
     const [images, setImages] = useState([]);
-    const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { showToast } = useToast();
 
     useEffect(() => {
-        // Check if the user is authenticated by fetching the current user's profile
-        axios.get('http://localhost:3482/users/me', { withCredentials: true })
-            .then(response => {
-                console.log('User is authenticated:', response.data);
-            })
-            .catch(error => {
-                console.error('Error fetching user profile:', error);
-                setErrorMessage('You must be logged in to create a product.');
-            });
-    }, []);
+        if (!isOpen) return;
+        setErrorMessage('');
+    }, [isOpen]);
 
-    const handleImageChange = (e) => {
-        setImages(e.target.files);
+    const resetForm = () => {
+        setTitle('');
+        setDescription('');
+        setPrice('');
+        setIsFree(false);
+        setIsOpenToTrade(false);
+        setImages([]);
+        setErrorMessage('');
+        setLoading(false);
     };
 
-    const handleSubmit = (e) => {
+    const handleClose = () => {
+        resetForm();
+        onClose();
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const user = JSON.parse(localStorage.getItem('user'));
+        setLoading(true);
+        setErrorMessage('');
+
         const formData = new FormData();
         formData.append('title', title);
         formData.append('description', description);
-        formData.append('price', parseFloat(price));
+        formData.append('price', isFree ? 0 : parseFloat(price) || 0);
         formData.append('isFree', isFree);
         formData.append('isOpenToTrade', isOpenToTrade);
-        formData.append('sellerId', user.id); // Include sellerId
         for (let i = 0; i < images.length; i++) {
             formData.append('images', images[i]);
         }
 
-        axios.post('http://localhost:3482/products', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
-            withCredentials: true // Include credentials in the request
-        })
-        .then(response => {
+        try {
+            const response = await api.post('/products', formData);
             onAddProduct(response.data.product);
-            setSuccessMessage('Product uploaded successfully');
-            setTimeout(() => {
-                setSuccessMessage('');
-                onClose();
-            }, 2000); // Close the modal after 2 seconds
-        })
-        .catch(error => {
-            console.error('Error creating product:', error);
-            setErrorMessage('Error creating product. Please try again.');
-        });
+            showToast('Product listed successfully.', 'success');
+            handleClose();
+        } catch (error) {
+            setErrorMessage(error.response?.data?.message || 'Error creating product. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    if (!isOpen) return null;
-
     return (
-        <div className="modal-overlay">
-            <div className="modal-content">
-                <h2>New Product</h2>
-                {successMessage && <p className="success-message">{successMessage}</p>}
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
-                <form onSubmit={handleSubmit}>
-                    <input
-                        type="text"
-                        placeholder="Product Title"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required
-                    />
-                    <textarea
-                        placeholder="Description"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        required
-                    />
-                    <input
-                        type="number"
-                        placeholder="Price"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        required
-                    />
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={isFree}
-                            onChange={(e) => setIsFree(e.target.checked)}
+        <Modal show={isOpen} onHide={handleClose} centered>
+            <Modal.Header closeButton>
+                <Modal.Title>New Product</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Form onSubmit={handleSubmit}>
+                    <Form.Group controlId="product-title">
+                        <Form.Label>Title</Form.Label>
+                        <Form.Control
+                            type="text"
+                            placeholder="Product title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required
                         />
-                        Free
-                    </label>
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={isOpenToTrade}
-                            onChange={(e) => setIsOpenToTrade(e.target.checked)}
+                    </Form.Group>
+                    <Form.Group controlId="product-description" className="mt-3">
+                        <Form.Label>Description</Form.Label>
+                        <Form.Control
+                            as="textarea"
+                            rows={3}
+                            placeholder="What are you listing?"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            required
                         />
-                        Open to Trade
-                    </label>
-                    <input
-                        type="file"
-                        multiple
-                        onChange={handleImageChange}
+                    </Form.Group>
+                    <Form.Group controlId="product-price" className="mt-3">
+                        <Form.Label>Price (€)</Form.Label>
+                        <Form.Control
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Price"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            disabled={isFree}
+                            required={!isFree}
+                        />
+                    </Form.Group>
+                    <Form.Check
+                        className="mt-3"
+                        type="checkbox"
+                        label="Free"
+                        checked={isFree}
+                        onChange={(e) => {
+                            setIsFree(e.target.checked);
+                            if (e.target.checked) setPrice('0');
+                        }}
                     />
-                    <button type="submit">Add Product</button>
-                    <button type="button" onClick={onClose}>Cancel</button>
-                </form>
-            </div>
-        </div>
+                    <Form.Check
+                        className="mt-2"
+                        type="checkbox"
+                        label="Open to trade"
+                        checked={isOpenToTrade}
+                        onChange={(e) => setIsOpenToTrade(e.target.checked)}
+                    />
+                    <Form.Group controlId="product-images" className="mt-3">
+                        <Form.Label>Images</Form.Label>
+                        <Form.Control
+                            type="file"
+                            accept="image/png,image/jpeg"
+                            multiple
+                            onChange={(e) => setImages(e.target.files)}
+                        />
+                    </Form.Group>
+                    {errorMessage && <p className="text-danger mt-2">{errorMessage}</p>}
+                    <Button type="submit" variant="success" className="mt-3 w-100" disabled={loading}>
+                        {loading ? <Spinner animation="border" size="sm" /> : 'Add Product'}
+                    </Button>
+                </Form>
+            </Modal.Body>
+        </Modal>
     );
-};
+}
 
 export default NewProductModal;

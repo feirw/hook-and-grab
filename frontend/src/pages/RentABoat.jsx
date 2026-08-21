@@ -1,80 +1,99 @@
-import React, { useEffect, useState } from 'react';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { useEffect, useMemo, useState } from 'react';
 import { FaList, FaTh, FaSearch } from 'react-icons/fa';
-import { Container, Row, Col, Image, Button } from 'react-bootstrap';
-import { useNavigate } from 'react-router-dom';
-import NavBar from './../components/NavBar';
+import { Button } from 'react-bootstrap';
+import '../styles/Market.css';
 import '../styles/RentABoat.css';
-import axios from 'axios';
-import NewBoatModal from './../components/NewBoatModal';
+import NewBoatModal from '../components/NewBoatModal';
+import BookingModal from '../components/BookingModal';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
-import AddIcon from '@mui/icons-material/Add';
+import api from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { mediaSrc, formatPrice } from '../utils/format';
 
 const RentABoat = () => {
-    const navigate = useNavigate();
+    const { user, openLogin } = useAuth();
+    const { showToast } = useToast();
     const [isGridView, setIsGridView] = useState(true);
-    const [boats, setBoats] = useState([]); // Initialize as an empty array
-    const [filteredBoats, setFilteredBoats] = useState([]);
+    const [boats, setBoats] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedBoat, setSelectedBoat] = useState(null);
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [maxPrice, setMaxPrice] = useState(200);
+    const [currentMaxPrice, setCurrentMaxPrice] = useState(200);
+    const [locationFilter, setLocationFilter] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    const fetchBoats = () => {
+        setLoading(true);
+        api.get('/boats?limit=100')
+            .then((response) => {
+                const fetched = response.data.boats || [];
+                setBoats(fetched);
+                const prices = fetched.map((boat) => Number(boat.pricePerDay) || 0);
+                const highest = prices.length ? Math.max(...prices) : 200;
+                setMaxPrice(highest);
+                setCurrentMaxPrice(highest);
+                setError('');
+            })
+            .catch(() => setError('Could not load boats right now.'))
+            .finally(() => setLoading(false));
+    };
 
     useEffect(() => {
-        axios.get('http://localhost:3482/boats')
-            .then(response => {
-                console.log('Response:', response);
-                if (Array.isArray(response.data.boats)) {
-                    setBoats(response.data.boats);
-                    setFilteredBoats(response.data.boats);
-                } else {
-                    console.error('Unexpected response format:', response.data);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching boats:', error);
-            });
+        fetchBoats();
     }, []);
 
-    useEffect(() => {
-        filterBoats(searchQuery);
-    }, [searchQuery, boats]);
+    const locations = useMemo(
+        () => [...new Set(boats.map((boat) => boat.location).filter(Boolean))],
+        [boats]
+    );
 
-    const filterBoats = (query) => {
-        const filtered = boats.filter(boat => 
-            boat.title.toLowerCase().includes(query.toLowerCase()) ||
-            boat.description.toLowerCase().includes(query.toLowerCase())
-        );
-        setFilteredBoats(filtered);
-    };
+    const filteredBoats = useMemo(() => {
+        const query = searchQuery.toLowerCase();
+        return boats.filter((boat) => {
+            const matchesQuery =
+                boat.title?.toLowerCase().includes(query) ||
+                boat.description?.toLowerCase().includes(query) ||
+                boat.location?.toLowerCase().includes(query);
+            const matchesPrice = (Number(boat.pricePerDay) || 0) <= currentMaxPrice;
+            const matchesLocation = locationFilter ? boat.location === locationFilter : true;
+            return matchesQuery && matchesPrice && matchesLocation;
+        });
+    }, [boats, searchQuery, currentMaxPrice, locationFilter]);
 
-    const toggleView = () => {
-        setIsGridView(!isGridView);
-    };
-
-    const handleOpenModal = () => {
+    const openListing = () => {
+        if (!user) {
+            openLogin();
+            return;
+        }
         setIsModalOpen(true);
     };
 
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
+    const openBooking = (boat) => {
+        if (!user) {
+            openLogin();
+            return;
+        }
+        if (Number(boat.ownerId) === Number(user.id)) {
+            showToast('You already own this listing.', 'info');
+            return;
+        }
+        setSelectedBoat(boat);
     };
-
-    const handleAddBoat = (newBoat) => {
-        setBoats([...boats, newBoat]);
-    };
-
-    const user = JSON.parse(localStorage.getItem('user'));
 
     return (
         <div className="site-container">
-            <NavBar />
             <div className="content-container">
                 <div className="header">
                     <div className="market-icons">
                         <div className="right-grid mt-5">
                             {isGridView ? (
-                                <FaList className="market-icon" onClick={toggleView} />
+                                <FaList className="market-icon" onClick={() => setIsGridView(false)} />
                             ) : (
-                                <FaTh className="market-icon" onClick={toggleView} />
+                                <FaTh className="market-icon" onClick={() => setIsGridView(true)} />
                             )}
                         </div>
                     </div>
@@ -82,9 +101,39 @@ const RentABoat = () => {
                     <p className="text-center">Save Resources, Empower Communities</p>
                 </div>
                 <section className="renting-search">
-                    <button className="rent-filter-button">
-                        Filters <FilterAltIcon id="filter-icon" />
-                    </button>
+                    <div className="filter-wrapper">
+                        <button className="rent-filter-button" onClick={() => setShowFilterMenu((open) => !open)}>
+                            Filters <FilterAltIcon id="filter-icon" />
+                        </button>
+                        {showFilterMenu && (
+                            <div className="filter-menu">
+                                <div className="slider-container">
+                                    <label htmlFor="boat-max-price">Up to {currentMaxPrice}€ / day</label>
+                                    <input
+                                        id="boat-max-price"
+                                        type="range"
+                                        min="0"
+                                        max={maxPrice || 1}
+                                        value={currentMaxPrice}
+                                        onChange={(e) => setCurrentMaxPrice(+e.target.value)}
+                                    />
+                                </div>
+                                <div className="checkbox-container">
+                                    <label htmlFor="boat-location">Location</label>
+                                    <select
+                                        id="boat-location"
+                                        value={locationFilter}
+                                        onChange={(e) => setLocationFilter(e.target.value)}
+                                    >
+                                        <option value="">All harbors</option>
+                                        {locations.map((location) => (
+                                            <option key={location} value={location}>{location}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <div className="search-input-wrapper">
                         <FaSearch className="search-icon" />
                         <input
@@ -95,32 +144,51 @@ const RentABoat = () => {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    {/* <button className="renting-search-button">Search</button> */}
-                    {user && (
-                        <button className="renting-your-boat-button" onClick={handleOpenModal}>
-                            Rent your Boat
-                        </button>
-                    )}
+                    <button className="renting-your-boat-button" onClick={openListing}>
+                        Rent your Boat
+                    </button>
                 </section>
+
+                {loading && <p className="status-message">Loading boats...</p>}
+                {error && <p className="status-message status-error">{error}</p>}
+                {!loading && !error && filteredBoats.length === 0 && (
+                    <p className="status-message">No boats match those filters yet.</p>
+                )}
+
                 <section className={`market-items ${isGridView ? 'grid-view' : 'list-view'}`}>
-                    {filteredBoats.map((boat, index) => (
-                        <div key={index} className="market-item font1">
-                            <h2>{boat.title}</h2>
-                            {boat.images && boat.images.length > 0 && (
-                                <img src={`data:${boat.images[0].mimeType};base64,${boat.images[0].data}`} alt={boat.title} />
-                            )}
-                            <p>{boat.description}</p>
-                            <p>{(boat.pricePerDay || 0).toFixed(2)}€ per day</p>
-                            <div className="market-item-buttons">
-                                <Button variant="primary" className="rent-button">
-                                    Rent Now
-                                </Button>
+                    {filteredBoats.map((boat) => {
+                        const image = mediaSrc(boat.images?.[0]);
+                        return (
+                            <div key={boat.id} className="market-item font1">
+                                <h2>{boat.title}</h2>
+                                {image ? (
+                                    <img src={image} alt={boat.title} />
+                                ) : (
+                                    <div className="item-placeholder">No photo yet</div>
+                                )}
+                                <p>{boat.description}</p>
+                                <p>{formatPrice(boat.pricePerDay)} per day</p>
+                                <div className="item-badges">
+                                    {boat.location ? <span className="badge-pill">{boat.location}</span> : null}
+                                    {boat.ownerUsername ? <span className="badge-pill badge-muted">{boat.ownerUsername}</span> : null}
+                                </div>
+                                <div className="market-item-buttons">
+                                    <Button variant="primary" className="rent-button" onClick={() => openBooking(boat)}>
+                                        Rent Now
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </section>
             </div>
-            <NewBoatModal isOpen={isModalOpen} onClose={handleCloseModal} onAddBoat={handleAddBoat} />
+            <NewBoatModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onAddBoat={(boat) => setBoats((current) => [boat, ...current])} />
+            <BookingModal
+                boat={selectedBoat}
+                show={Boolean(selectedBoat)}
+                onClose={() => setSelectedBoat(null)}
+                onBooked={() => showToast('Booking request sent to the owner.', 'success')}
+            />
         </div>
     );
 };

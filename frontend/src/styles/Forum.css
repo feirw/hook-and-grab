@@ -157,7 +157,40 @@
   flex-grow: 1; /* Allow flexible resizing if needed */
   box-sizing: border-box; /* Include padding in width calculations */
   max-width: 800vh;
-  height: 150vh;
+  min-height: auto;
+}
+
+.forum-row {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.forum-row:hover {
+  transform: translateX(4px);
+}
+
+.discussion-detail h2,
+.discussion-body,
+.discussion-meta {
+  text-shadow: none;
+}
+
+.discussion-meta {
+  opacity: 0.85;
+}
+
+.reply-card {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+}
+
+.reply-form textarea {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 @media (max-width: 768px) {

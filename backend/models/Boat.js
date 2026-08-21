@@ -17,7 +17,7 @@ class Boat {
       (ownerId, title, description, pricePerDay, location, images, datePosted)
       VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      [ownerId, title, description, pricePerDay, location, images.join(';'), datePosted],
+      [ownerId, title, description, pricePerDay, location, images ? images.join(';') : null, datePosted],
       function (err) {
         db.close();
         if (err) {
@@ -37,13 +37,33 @@ class Boat {
   static getAll(limit, offset, callback) {
     const db = getDatabaseConnection();
     db.all(
-      'SELECT * FROM boats ORDER BY datePosted DESC LIMIT ? OFFSET ?',
+      `SELECT boats.*, users.username AS ownerUsername, users.email AS ownerEmail, users.phone AS ownerPhone
+       FROM boats
+       LEFT JOIN users ON users.id = boats.ownerId
+       ORDER BY datePosted DESC LIMIT ? OFFSET ?`,
       [limit, offset],
       (err, boats) => {
         db.close();
         if (err) {
           return callback(err);
         }
+        return callback(null, boats);
+      }
+    );
+  }
+
+  static getByOwnerId(ownerId, callback) {
+    const db = getDatabaseConnection();
+    db.all(
+      `SELECT boats.*, users.username AS ownerUsername, users.email AS ownerEmail, users.phone AS ownerPhone
+       FROM boats
+       LEFT JOIN users ON users.id = boats.ownerId
+       WHERE boats.ownerId = ?
+       ORDER BY datePosted DESC`,
+      [ownerId],
+      (err, boats) => {
+        db.close();
+        if (err) return callback(err);
         return callback(null, boats);
       }
     );
